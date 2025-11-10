@@ -14,7 +14,7 @@ def ab_pruning():
 def opponent(color):
     return BLACK if color==WHITE else WHITE
 
-def evaluate_board(board):
+def evaluate_board(board, ai_color):
     '''
         board evaluation function, returns a score from -10 to 10
         positive score favors black, negative score favors white
@@ -28,13 +28,69 @@ def evaluate_board(board):
     score = 10 * (b_count - w_count) / total
     return score
 
+def minimax(board, depth, maximizing, ai_color, alpha, beta):
+    if depth == 0:
+        return evaluate_board(board, ai_color)
 
-def minimax():
-    # help find the best move
-    pass
+    current_color = ai_color if maximizing else opponent(ai_color)
+    moves = get_valid_moves(board, current_color)
 
-def AI_move():
-    pass
+    if not moves:
+        return evaluate_board(board, ai_color)
+
+    if maximizing:
+        max_eval = float('-inf')
+        for move in moves:
+            new_board = make_move(board, move[0], move[1], current_color)
+            eval_score = minimax(new_board, depth - 1, False, ai_color, alpha, beta)
+            max_eval = max(max_eval, eval_score)
+            alpha = max(alpha, eval_score)
+            if beta <= alpha:
+                break
+        return max_eval
+    else:
+        min_eval = float('inf')
+        for move in moves:
+            new_board = make_move(board, move[0], move[1], current_color)
+            eval_score = minimax(new_board, depth - 1, True, ai_color, alpha, beta)
+            min_eval = min(min_eval, eval_score)
+            beta = min(beta, eval_score)
+            if beta <= alpha:
+                break
+        return min_eval
+
+
+def AI_move(board, ai_color):
+    """
+    Chooses the best move for the AI using minimax with alpha-beta pruning.
+    Returns (row, col) or None if no valid moves exist.
+    """
+    valid_moves = get_valid_moves(board, ai_color)
+    if not valid_moves:
+        return None
+
+    best_move = None
+    best_value = float('-inf') if ai_color == BLACK else float('inf')
+
+    # Limit depth to keep AI thinking time short
+    depth = 3
+
+    for move in valid_moves:
+        new_board = make_move(board, move[0], move[1], ai_color)
+        value = minimax(new_board, depth - 1, False, ai_color, float('-inf'), float('inf'))
+
+        if ai_color == BLACK:
+            if value > best_value:
+                best_value = value
+                best_move = move
+        else:
+            if value < best_value:
+                best_value = value
+                best_move = move
+
+    print(f"AI ({ai_color}) chooses move: {best_move} with score {best_value:.2f}")
+    return best_move
+
 
 def get_valid_moves(board, color):
     return [(col, row) for col in range(8) for row in range(8) if valid_move(board, row, col, color)]
@@ -102,7 +158,6 @@ def play():
     
     while True:
         print_board(board)
-        print(evaluate_board(board))
         b_count, w_count = count(board)
         print("Black Score: " + str(b_count))
         print("White Score: " + str(w_count))
@@ -154,6 +209,7 @@ def play():
         print("White wins!")
     else:
         print("Draw!")
+        
 
 if __name__ == '__main__':
     play()
