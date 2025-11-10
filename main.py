@@ -22,8 +22,11 @@ def minimax():
     # help find the best move
     pass
 
+def AI_move():
+    pass
+
 def get_valid_moves(board, color):
-    return [(row, col) for row in range(8) for col in range(8) if valid_move(board, row, col, color)]
+    return [(col, row) for col in range(8) for row in range(8) if valid_move(board, row, col, color)]
 
 def valid_move(board, x, y, color):
     if not (0 <= x < 8 and 0 <= y < 8) or board[x][y] != NONE:
@@ -41,26 +44,31 @@ def valid_move(board, x, y, color):
     
 
 def make_move(board, x, y, color):
-    # list of all valid moves
     updated_board = copy.deepcopy(board)
     updated_board[x][y] = color
     for dx, dy in directions:
         row, col = x + dx, y + dy
-        flips = list()
-        while 0 <= row < 8 and 0 <= col < 8:
-            flips.append(row, col)
+        flips = []
+        while 0 <= row < 8 and 0 <= col < 8 and updated_board[row][col] == opponent(color):
+            flips.append((row, col))
             row += dx
             col += dy
-        if flips and 0 <= row < 8 and 0 <= col < 8 and updated_board[row][col] == color:
+        if 0 <= row < 8 and 0 <= col < 8 and updated_board[row][col] == color:
             for r, c in flips:
                 updated_board[r][c] = color
     return updated_board
 
+
+def count(board):
+    black = sum(row.count(BLACK) for row in board)
+    white = sum(row.count(WHITE) for row in board)
+    return black, white
+
 def print_board(board):
     # print current state of the board
-    print('  ' + ' '.join(str(x) for x in range(8)))
-    for y in reversed(range(8)):
-        print(f"{y}  " + ' '.join(board[y]))
+    print("   " + " ".join(str(x) for x in range(8)))
+    for y in reversed(range(8)):  # show (0,0) at bottom left
+        print(f"{y}  " + " ".join(board[y]))
     print()
 
 def play():
@@ -83,7 +91,57 @@ def play():
     
     while True:
         print_board(board)
-        break
+        b_count, w_count = count(board)
+        print("Black Score: " + str(b_count))
+        print("White Score: " + str(w_count))
+        moves = get_valid_moves(board, current_color)
+        if not moves:
+            print(current_color + " has 0 valid moves, skip turn")
+            current_color = opponent(current_color)
+            if not get_valid_moves(board, current_color):
+                print("No moves for anyome. End of game")
+                break
+            continue
+        if AI and current_color == AI_color:
+            move = AI_move(board, AI_color)
+            if move:
+                row, col = move
+            else:
+                print("No AI yet.")
+                break
+        else:
+            print(current_color + "'s turn. Possible moves: " + str(moves))
+            move = input("Enter (x, y) as your move. If you wish to undo a move, enter 'undo': ").strip()
+            if move == 'undo':
+                if undo:
+                    board = undo.pop()
+                    current_color = opponent(current_color)
+                    continue
+                else:
+                    print("No moves to undo")
+                    continue
+            try:
+                x_move, y_move = map(int, move.split())
+                row, col = y_move, x_move
+                if (row, col) not in moves:
+                    print("Move invalid")
+                    continue
+            except:
+                print("Wrong input format. Input should be 'x y'")
+                continue
+        undo.append(copy.deepcopy(board))
+        board = make_move(board, row, col, current_color)
+        current_color = opponent(current_color)
+
+    print_board(board)
+    b_count, w_count = count(board)
+    print("Final Score -> Black: " + str(b_count) + ", White: " + str(w_count))
+    if b_count > w_count:
+        print("Black wins!")
+    elif b_count < w_count:
+        print("White wins!")
+    else:
+        print("Draw!")
 
 if __name__ == '__main__':
     play()
