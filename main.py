@@ -19,14 +19,36 @@ def evaluate_board(board, ai_color):
         board evaluation function, returns a score from -10 to 10
         positive score favors black, negative score favors white
     '''
-    b_count = sum(row.count('B') for row in board)
-    w_count = sum(row.count('W') for row in board)
-    total = b_count + w_count
+    # Positional weights — common heuristic from Othello AI research
+    WEIGHTS = [
+        [100, -20, 10,  5,  5, 10, -20, 100],
+        [-20, -50, -2, -2, -2, -2, -50, -20],
+        [10,  -2,  5,  1,  1,  5,  -2,  10],
+        [5,   -2,  1,  0,  0,  1,  -2,   5],
+        [5,   -2,  1,  0,  0,  1,  -2,   5],
+        [10,  -2,  5,  1,  1,  5,  -2,  10],
+        [-20, -50, -2, -2, -2, -2, -50, -20],
+        [100, -20, 10,  5,  5, 10, -20, 100],
+    ]
+
+    b_score = 0
+    w_score = 0
+
+    for r in range(8):
+        for c in range(8):
+            if board[r][c] == 'B':
+                b_score += WEIGHTS[r][c]
+            elif board[r][c] == 'W':
+                w_score += WEIGHTS[r][c]
+
+    # Normalize result to [-10, +10]
+    total = abs(b_score) + abs(w_score)
     if total == 0:
-        return 0  # empty board at start
-    # score ranges from -10 (white wins) to 10 (black wins)
-    score = 10 * (b_count - w_count) / total
-    return score
+        return 0
+
+    normalized = 10 * (b_score - w_score) / total
+    return normalized
+
 
 def minimax(board, depth, maximizing, ai_color, alpha, beta):
     if depth == 0:
@@ -41,8 +63,8 @@ def minimax(board, depth, maximizing, ai_color, alpha, beta):
     if maximizing:
         max_eval = float('-inf')
         for move in moves:
-            new_board = make_move(board, move[0], move[1], current_color)
-            eval_score = minimax(new_board, depth - 1, False, ai_color, alpha, beta)
+            updated_board = make_move(board, move[0], move[1], current_color)
+            eval_score = minimax(updated_board, depth - 1, False, ai_color, alpha, beta)
             max_eval = max(max_eval, eval_score)
             alpha = max(alpha, eval_score)
             if beta <= alpha:
@@ -51,8 +73,8 @@ def minimax(board, depth, maximizing, ai_color, alpha, beta):
     else:
         min_eval = float('inf')
         for move in moves:
-            new_board = make_move(board, move[0], move[1], current_color)
-            eval_score = minimax(new_board, depth - 1, True, ai_color, alpha, beta)
+            updated_board = make_move(board, move[0], move[1], current_color)
+            eval_score = minimax(updated_board, depth - 1, True, ai_color, alpha, beta)
             min_eval = min(min_eval, eval_score)
             beta = min(beta, eval_score)
             if beta <= alpha:
@@ -76,8 +98,8 @@ def AI_move(board, ai_color):
     depth = 3
 
     for move in valid_moves:
-        new_board = make_move(board, move[0], move[1], ai_color)
-        value = minimax(new_board, depth - 1, False, ai_color, float('-inf'), float('inf'))
+        updated_board = make_move(board, move[0], move[1], ai_color)
+        value = minimax(updated_board, depth - 1, False, ai_color, float('-inf'), float('inf'))
 
         if ai_color == BLACK:
             if value > best_value:
@@ -93,38 +115,42 @@ def AI_move(board, ai_color):
 
 
 def get_valid_moves(board, color):
-    return [(col, row) for col in range(8) for row in range(8) if valid_move(board, row, col, color)]
+    return [(x, y) for x in range(8) for y in range(8) if valid_move(board, x, y, color)]
+
 
 def valid_move(board, x, y, color):
-    if not (0 <= x < 8 and 0 <= y < 8) or board[x][y] != NONE:
+    if board[y][x] != NONE:
         return False
     for dx, dy in directions:
-        row, col = x + dx, y + dy
-        flip = False
-        while 0 <= row < 8 and 0 <= col < 8 and board[row][col] == opponent(color):
-            row += dx
-            col += dy
-            flip = True
-        if flip and 0 <= row < 8 and 0 <= col < 8 and board[row][col] == color:
-            return True
+        nx, ny = x + dx, y + dy
+        if not (0 <= nx < 8 and 0 <= ny < 8) or board[ny][nx] != opponent(color):
+            continue
+        # Found opponent next to us, continue in this direction
+        nx += dx
+        ny += dy
+        while 0 <= nx < 8 and 0 <= ny < 8:
+            if board[ny][nx] == NONE:
+                break
+            if board[ny][nx] == color:
+                return True
+            nx += dx
+            ny += dy
     return False
-    
 
 def make_move(board, x, y, color):
     updated_board = copy.deepcopy(board)
-    updated_board[x][y] = color
+    updated_board[y][x] = color
     for dx, dy in directions:
-        row, col = x + dx, y + dy
+        nx, ny = x + dx, y + dy
         flips = []
-        while 0 <= row < 8 and 0 <= col < 8 and updated_board[row][col] == opponent(color):
-            flips.append((row, col))
-            row += dx
-            col += dy
-        if 0 <= row < 8 and 0 <= col < 8 and updated_board[row][col] == color:
-            for r, c in flips:
-                updated_board[r][c] = color
+        while 0 <= nx < 8 and 0 <= ny < 8 and updated_board[ny][nx] == opponent(color):
+            flips.append((nx, ny))
+            nx += dx
+            ny += dy
+        if 0 <= nx < 8 and 0 <= ny < 8 and updated_board[ny][nx] == color:
+            for fx, fy in flips:
+                updated_board[fy][fx] = color
     return updated_board
-
 
 def count(board):
     black = sum(row.count(BLACK) for row in board)
@@ -132,15 +158,16 @@ def count(board):
     return black, white
 
 def print_board(board):
-    # print current state of the board
-    print("   " + " ".join(str(x) for x in range(8)))
-    for y in reversed(range(8)):  # show (0,0) at bottom left
-        print(f"{y}  " + " ".join(board[y]))
+    print("   " + " ".join(str(x) for x in range(8)))  # column headers
+    for y in reversed(range(8)):  # bottom to top
+        row_str = f"{y}  " + " ".join(board[y][x] for x in range(8))
+        print(row_str)
     print()
+
 
 def play():
     # main game loop
-    board = [[NONE for x in range(8)] for y in range(8)]
+    board = [[NONE for _ in range(8)] for _ in range(8)]
     board[3][3] = WHITE
     board[3][4] = BLACK
     board[4][3] = BLACK
@@ -172,32 +199,36 @@ def play():
         if AI and current_color == AI_color:
             move = AI_move(board, AI_color)
             if move:
-                row, col = move
+                x, y = move
             else:
                 print("No AI yet.")
                 break
         else:
             print(current_color + "'s turn. Possible moves: " + str(moves))
             move = input("Enter (x, y) as your move. If you wish to undo a move, enter 'undo': ").strip()
-            if move == 'undo':
-                if undo:
+            if move.lower() == 'undo':
+                if len(undo) > 0:
                     board = undo.pop()
                     current_color = opponent(current_color)
-                    continue
+                    # Undo AI move if playing against AI
+                    if AI and len(undo) > 0:
+                        board = undo.pop()
+                        current_color = opponent(current_color)
                 else:
                     print("No moves to undo")
-                    continue
+                    continue  # skip the rest of the loop
+
             try:
                 x_move, y_move = map(int, move.split())
-                row, col = y_move, x_move
-                if (row, col) not in moves:
+                x, y = x_move, y_move
+                if (x, y) not in moves:
                     print("Move invalid")
                     continue
             except:
                 print("Wrong input format. Input should be 'x y'")
                 continue
         undo.append(copy.deepcopy(board))
-        board = make_move(board, row, col, current_color)
+        board = make_move(board, x, y, current_color)
         current_color = opponent(current_color)
 
     print_board(board)
