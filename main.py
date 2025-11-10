@@ -14,9 +14,20 @@ def ab_pruning():
 def opponent(color):
     return BLACK if color==WHITE else WHITE
 
-def evaluate_board():
-    # implementation of a heuristic board evaluation funciton, unknown search tree depth yet
-    pass
+def evaluate_board(board):
+    '''
+        board evaluation function, returns a score from -10 to 10
+        positive score favors black, negative score favors white
+    '''
+    b_count = sum(row.count('B') for row in board)
+    w_count = sum(row.count('W') for row in board)
+    total = b_count + w_count
+    if total == 0:
+        return 0  # empty board at start
+    # score ranges from -10 (white wins) to 10 (black wins)
+    score = 10 * (b_count - w_count) / total
+    return score
+
 
 def minimax():
     # help find the best move
@@ -91,6 +102,7 @@ def play():
     
     while True:
         print_board(board)
+        print(evaluate_board(board))
         b_count, w_count = count(board)
         print("Black Score: " + str(b_count))
         print("White Score: " + str(w_count))
